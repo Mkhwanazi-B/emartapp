@@ -1,0 +1,5 @@
+- name: Setup Docker on all servers
+  hosts: all
+  become: yes
+  roles:
+    - common

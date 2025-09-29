@@ -1,7 +1,9 @@
 name: Setup Infrastructure with Ansible
 
 on:
-  workflow_dispatch:  # Manual trigger only
+  push:
+    branches: [main]          # runs whenever you push to main
+  workflow_dispatch:           # still allows manual trigger
 
 jobs:
   setup-infrastructure:

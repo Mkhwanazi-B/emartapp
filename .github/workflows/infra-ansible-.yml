@@ -1,16 +1,18 @@
+# .github/workflows/setup-infra.yml
 name: Setup Infrastructure with Ansible
 
 on:
+  workflow_dispatch:  # Manual trigger
   push:
-    branches: [main]          # runs whenever you push to main
-  workflow_dispatch:           # still allows manual trigger
+    branches: [main]
 
 jobs:
   setup-infrastructure:
+    name: Setup Server Dependencies
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Python
@@ -25,13 +27,17 @@ jobs:
 
       - name: Setup SSH Key
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/vprofile-prod.pem
-          chmod 600 ~/.ssh/vprofile-prod.pem
-          ssh-keyscan -H 13.60.187.151 >> ~/.ssh/known_hosts
-          ssh-keyscan -H 51.21.182.191 >> ~/.ssh/known_hosts
-          ssh-keyscan -H 13.61.34.198 >> ~/.ssh/known_hosts
+          mkdir -p $HOME/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > $HOME/.ssh/vprofile-prod.pem
+          chmod 600 $HOME/.ssh/vprofile-prod.pem
+
+          # Add all hosts to known_hosts
+          ssh-keyscan -H 13.51.166.62 >> $HOME/.ssh/known_hosts   # client_nginx
+          ssh-keyscan -H 13.62.76.96 >> $HOME/.ssh/known_hosts   # node_mongo
+          ssh-keyscan -H 51.20.54.156 >> $HOME/.ssh/known_hosts  # java_mysql
 
       - name: Run Ansible Playbook
         run: |
-          ansible-playbook -i inventory/hosts.yml ansible/playbooks/main.yml --private-key ~/.ssh/vprofile-prod.pem
+          ansible-playbook -i ansible/inventory/hosts.yml \
+            --private-key $HOME/.ssh/vprofile-prod.pem \
+            ansible/playbooks/main.yml

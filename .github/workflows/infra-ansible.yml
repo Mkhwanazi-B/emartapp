@@ -1,4 +1,4 @@
-# .github/workflows/setup-infrastructure.yml
+# .github/workflows/infra-ansible.yml (Fixed to use your existing files)
 name: Setup Infrastructure with Ansible
 
 on:
@@ -137,60 +137,130 @@ jobs:
           echo "🔍 Testing Ansible connectivity to all hosts..."
           ansible all -i ansible/inventory/hosts.yml -m ping --one-line
 
-      - name: Run Setup Playbooks
+      - name: Run Your Existing Docker Setup
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
           ANSIBLE_SSH_ARGS: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
         run: |
-          echo "🚀 Starting server setup..."
+          echo "🚀 Running your existing Docker setup on all servers..."
           
-          # Run setup for client + nginx server
-          echo "📦 Setting up Client + Nginx server..."
+          # Run your existing main playbook
           ansible-playbook -i ansible/inventory/hosts.yml \
-            --limit client_servers \
             --private-key "${HOME}/.ssh/vprofile-prod.pem" \
-            ansible/playbooks/setup-client-nginx.yml -v
+            ansible/playbooks/main.yml -v
+
+      - name: Install Additional Dependencies Per Server
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+          ANSIBLE_SSH_ARGS: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+        run: |
+          echo "📦 Installing additional dependencies per server type..."
           
-          # Run setup for node api + mongo server  
-          echo "📦 Setting up Node API + MongoDB server..."
-          ansible-playbook -i ansible/inventory/hosts.yml \
-            --limit node_mongo \
+          # Install Node.js on Client + Node API servers
+          echo "Installing Node.js on client and Node API servers..."
+          ansible client_nginx,node_mongo -i ansible/inventory/hosts.yml \
             --private-key "${HOME}/.ssh/vprofile-prod.pem" \
-            ansible/playbooks/setup-nodeapi-mongo.yml -v
-            
-          # Run setup for java api + mysql server
-          echo "📦 Setting up Java API + MySQL server..."
-          ansible-playbook -i ansible/inventory/hosts.yml \
-            --limit java_mysql \
+            -m shell -a "curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - && sudo apt-get install -y nodejs" \
+            --become
+
+          # Install Java and Maven on Java API server
+          echo "Installing Java and Maven on Java API server..."
+          ansible java_mysql -i ansible/inventory/hosts.yml \
             --private-key "${HOME}/.ssh/vprofile-prod.pem" \
-            ansible/playbooks/setup-javaapi-mysql.yml -v
+            -m shell -a "sudo apt-get update && sudo apt-get install -y openjdk-8-jdk maven" \
+            --become
+
+          # Install Nginx on client server
+          echo "Installing Nginx on client server..."
+          ansible client_nginx -i ansible/inventory/hosts.yml \
+            --private-key "${HOME}/.ssh/vprofile-prod.pem" \
+            -m shell -a "sudo apt-get install -y nginx && sudo systemctl enable nginx && sudo systemctl start nginx" \
+            --become
+
+          # Install database clients
+          echo "Installing MongoDB client on Node API server..."
+          ansible node_mongo -i ansible/inventory/hosts.yml \
+            --private-key "${HOME}/.ssh/vprofile-prod.pem" \
+            -m shell -a "wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add - && echo 'deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse' | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list && sudo apt-get update && sudo apt-get install -y mongodb-mongosh" \
+            --become
+
+          echo "Installing MySQL client on Java API server..."
+          ansible java_mysql -i ansible/inventory/hosts.yml \
+            --private-key "${HOME}/.ssh/vprofile-prod.pem" \
+            -m shell -a "sudo apt-get install -y mysql-client" \
+            --become
+
+      - name: Configure Firewalls
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+        run: |
+          echo "🔥 Configuring firewalls..."
+          
+          # Configure firewall for client server
+          ansible client_nginx -i ansible/inventory/hosts.yml \
+            --private-key "${HOME}/.ssh/vprofile-prod.pem" \
+            -m shell -a "sudo ufw allow 22 && sudo ufw allow 80 && sudo ufw allow 443 && sudo ufw allow 4200 && sudo ufw --force enable" \
+            --become
+
+          # Configure firewall for Node API server
+          ansible node_mongo -i ansible/inventory/hosts.yml \
+            --private-key "${HOME}/.ssh/vprofile-prod.pem" \
+            -m shell -a "sudo ufw allow 22 && sudo ufw allow 5000 && sudo ufw allow 27017 && sudo ufw --force enable" \
+            --become
+
+          # Configure firewall for Java API server
+          ansible java_mysql -i ansible/inventory/hosts.yml \
+            --private-key "${HOME}/.ssh/vprofile-prod.pem" \
+            -m shell -a "sudo ufw allow 22 && sudo ufw allow 9000 && sudo ufw allow 3306 && sudo ufw --force enable" \
+            --become
+
+      - name: Create Application Directories
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+        run: |
+          echo "📁 Creating application directories..."
+          
+          # Create directories on all servers
+          ansible all -i ansible/inventory/hosts.yml \
+            --private-key "${HOME}/.ssh/vprofile-prod.pem" \
+            -m shell -a "sudo mkdir -p /opt/emart /var/log/emart && sudo chown ubuntu:ubuntu /opt/emart /var/log/emart" \
+            --become
 
       - name: Verify Installation
         run: |
           echo "🔍 Verifying installations on all servers..."
           
           # Check Docker installation
+          echo "Checking Docker..."
           ansible all -i ansible/inventory/hosts.yml \
             --private-key "${HOME}/.ssh/vprofile-prod.pem" \
-            -m shell -a "docker --version" --one-line
-          
+            -m shell -a "docker --version && sudo systemctl status docker" --one-line
+
           # Check Node.js on relevant servers
-          ansible client_servers,node_mongo -i ansible/inventory/hosts.yml \
+          echo "Checking Node.js..."
+          ansible client_nginx,node_mongo -i ansible/inventory/hosts.yml \
             --private-key "${HOME}/.ssh/vprofile-prod.pem" \
-            -m shell -a "node --version" --one-line
-          
+            -m shell -a "node --version && npm --version" --one-line || echo "Node.js not installed on some servers"
+
           # Check Java on Java server
+          echo "Checking Java..."
           ansible java_mysql -i ansible/inventory/hosts.yml \
             --private-key "${HOME}/.ssh/vprofile-prod.pem" \
-            -m shell -a "java -version" --one-line
+            -m shell -a "java -version && mvn --version" --one-line || echo "Java/Maven not installed"
+
+          # Check Nginx on client server
+          echo "Checking Nginx..."
+          ansible client_nginx -i ansible/inventory/hosts.yml \
+            --private-key "${HOME}/.ssh/vprofile-prod.pem" \
+            -m shell -a "sudo systemctl status nginx" --one-line || echo "Nginx not running"
 
       - name: Setup Summary
         run: |
           echo "✅ Infrastructure setup completed!"
           echo ""
           echo "📊 Server Summary:"
-          echo "🖥️  Client + Nginx: 13.51.166.62"
-          echo "🔗 Node API + MongoDB: 13.62.76.96" 
-          echo "☕ Java API + MySQL: 51.20.54.156"
+          echo "🖥️  Client + Nginx: 13.51.166.62 (Docker, Node.js, Nginx)"
+          echo "🔗 Node API + MongoDB: 13.62.76.96 (Docker, Node.js, MongoDB tools)" 
+          echo "☕ Java API + MySQL: 51.20.54.156 (Docker, Java 8, Maven, MySQL client)"
           echo ""
           echo "🚀 Ready for application deployment with Kamal!"

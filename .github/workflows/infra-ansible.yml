@@ -1,266 +1,41 @@
-# .github/workflows/infra-ansible.yml (Fixed to use your existing files)
-name: Setup Infrastructure with Ansible
+name: Setup Servers with Ansible
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # Manual trigger
   push:
     branches: [main]
     paths:
       - 'ansible/**'
-      - '.github/workflows/infra-ansible.yml'
+      - '.github/workflows/ansible-setup.yml'
 
 jobs:
-  setup-infrastructure:
-    name: Setup Server Dependencies
+  setup-servers:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
       - name: Install Ansible
         run: |
-          python -m pip install --upgrade pip
-          pip install ansible boto3 botocore
+          sudo apt update -y
+          sudo apt install ansible -y
 
-      - name: Setup SSH Key and Config
-        shell: bash
+      - name: Setup SSH Key
         run: |
-          set -euo pipefail
-          
-          # Create SSH directory
-          export SSH_DIR="${HOME}/.ssh"
-          mkdir -p "$SSH_DIR"
-          chmod 700 "$SSH_DIR"
-          
-          # Verify SSH private key secret exists
-          if [[ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]]; then
-            echo "❌ SSH_PRIVATE_KEY secret is not set!"
-            exit 1
-          fi
-          
-          # Write SSH private key
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > "$SSH_DIR/vprofile-prod.pem"
-          chmod 600 "$SSH_DIR/vprofile-prod.pem"
-          
-          # Updated server IPs (from your error log)
-          SERVERS=(13.51.166.62 13.62.76.96 51.20.54.156)
-          
-          # Create SSH config to disable host key checking
-          cat > "$SSH_DIR/config" << EOF
-          Host *
-              StrictHostKeyChecking no
-              UserKnownHostsFile /dev/null
-              LogLevel ERROR
-              IdentitiesOnly yes
-          
-          Host 13.51.166.62
-              User ubuntu
-              IdentityFile $SSH_DIR/vprofile-prod.pem
-              
-          Host 13.62.76.96
-              User ubuntu  
-              IdentityFile $SSH_DIR/vprofile-prod.pem
-              
-          Host 51.20.54.156
-              User ubuntu
-              IdentityFile $SSH_DIR/vprofile-prod.pem
-          EOF
-          chmod 600 "$SSH_DIR/config"
-          
-          # Test SSH connectivity to each server
-          echo "🔍 Testing SSH connectivity..."
-          for server in "${SERVERS[@]}"; do
-            echo "Testing connection to $server..."
-            if timeout 10 ssh -o ConnectTimeout=5 ubuntu@$server 'echo "✅ Connected to $(hostname)"' 2>/dev/null; then
-              echo "✅ $server is reachable"
-            else
-              echo "❌ $server is not reachable - check if server is running and SSH key is correct"
-            fi
-          done
-          
-          echo "SSH_DIR=$SSH_DIR" >> "$GITHUB_ENV"
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/vprofile-prod.pem
+          chmod 600 ~/.ssh/vprofile-prod.pem
+          echo "StrictHostKeyChecking no" > ~/.ssh/config
+          chmod 600 ~/.ssh/config
 
-      - name: Create Ansible Configuration
+      - name: Run Ansible Playbook
         run: |
-          # Create ansible.cfg to disable host key checking
-          cat > ansible.cfg << EOF
-          [defaults]
-          host_key_checking = False
-          remote_user = ubuntu
-          private_key_file = ${HOME}/.ssh/vprofile-prod.pem
-          timeout = 30
-          gather_timeout = 30
-          
-          [ssh_connection]
-          ssh_args = -o ControlMaster=auto -o ControlPersist=60s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no
-          pipelining = True
-          EOF
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/main.yml \
+            --private-key ~/.ssh/vprofile-prod.pem \
+            -e "ansible_ssh_private_key_file=~/.ssh/vprofile-prod.pem" \
+            -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no'"
 
-      - name: Update Ansible Inventory with Current IPs
-        run: |
-          # Create updated inventory with your current server IPs
-          mkdir -p ansible/inventory
-          cat > ansible/inventory/hosts.yml << EOF
-          all:
-            children:
-              client_servers:
-                hosts:
-                  client_nginx:
-                    ansible_host: 13.51.166.62
-                    ansible_user: ubuntu
-                    ansible_ssh_private_key_file: ${HOME}/.ssh/vprofile-prod.pem
-                    server_role: client-nginx
-              
-              api_servers:
-                hosts:
-                  node_mongo:
-                    ansible_host: 13.62.76.96
-                    ansible_user: ubuntu
-                    ansible_ssh_private_key_file: ${HOME}/.ssh/vprofile-prod.pem
-                    server_role: nodeapi-mongo
-                    
-                  java_mysql:
-                    ansible_host: 51.20.54.156
-                    ansible_user: ubuntu
-                    ansible_ssh_private_key_file: ${HOME}/.ssh/vprofile-prod.pem
-                    server_role: javaapi-mysql
-          EOF
-
-      - name: Test Ansible Connectivity
-        run: |
-          echo "🔍 Testing Ansible connectivity to all hosts..."
-          ansible all -i ansible/inventory/hosts.yml -m ping --one-line
-
-      - name: Run Your Existing Docker Setup
-        env:
-          ANSIBLE_HOST_KEY_CHECKING: "False"
-          ANSIBLE_SSH_ARGS: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-        run: |
-          echo "🚀 Running your existing Docker setup on all servers..."
-          
-          # Run your existing main playbook
-          ansible-playbook -i ansible/inventory/hosts.yml \
-            --private-key "${HOME}/.ssh/vprofile-prod.pem" \
-            ansible/playbooks/main.yml -v
-
-      - name: Install Additional Dependencies Per Server
-        env:
-          ANSIBLE_HOST_KEY_CHECKING: "False"
-          ANSIBLE_SSH_ARGS: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-        run: |
-          echo "📦 Installing additional dependencies per server type..."
-          
-          # Install Node.js on Client + Node API servers
-          echo "Installing Node.js on client and Node API servers..."
-          ansible client_nginx,node_mongo -i ansible/inventory/hosts.yml \
-            --private-key "${HOME}/.ssh/vprofile-prod.pem" \
-            -m shell -a "curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - && sudo apt-get install -y nodejs" \
-            --become
-
-          # Install Java and Maven on Java API server
-          echo "Installing Java and Maven on Java API server..."
-          ansible java_mysql -i ansible/inventory/hosts.yml \
-            --private-key "${HOME}/.ssh/vprofile-prod.pem" \
-            -m shell -a "sudo apt-get update && sudo apt-get install -y openjdk-8-jdk maven" \
-            --become
-
-          # Install Nginx on client server
-          echo "Installing Nginx on client server..."
-          ansible client_nginx -i ansible/inventory/hosts.yml \
-            --private-key "${HOME}/.ssh/vprofile-prod.pem" \
-            -m shell -a "sudo apt-get install -y nginx && sudo systemctl enable nginx && sudo systemctl start nginx" \
-            --become
-
-          # Install database clients
-          echo "Installing MongoDB client on Node API server..."
-          ansible node_mongo -i ansible/inventory/hosts.yml \
-            --private-key "${HOME}/.ssh/vprofile-prod.pem" \
-            -m shell -a "wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add - && echo 'deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse' | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list && sudo apt-get update && sudo apt-get install -y mongodb-mongosh" \
-            --become
-
-          echo "Installing MySQL client on Java API server..."
-          ansible java_mysql -i ansible/inventory/hosts.yml \
-            --private-key "${HOME}/.ssh/vprofile-prod.pem" \
-            -m shell -a "sudo apt-get install -y mysql-client" \
-            --become
-
-      - name: Configure Firewalls
-        env:
-          ANSIBLE_HOST_KEY_CHECKING: "False"
-        run: |
-          echo "🔥 Configuring firewalls..."
-          
-          # Configure firewall for client server
-          ansible client_nginx -i ansible/inventory/hosts.yml \
-            --private-key "${HOME}/.ssh/vprofile-prod.pem" \
-            -m shell -a "sudo ufw allow 22 && sudo ufw allow 80 && sudo ufw allow 443 && sudo ufw allow 4200 && sudo ufw --force enable" \
-            --become
-
-          # Configure firewall for Node API server
-          ansible node_mongo -i ansible/inventory/hosts.yml \
-            --private-key "${HOME}/.ssh/vprofile-prod.pem" \
-            -m shell -a "sudo ufw allow 22 && sudo ufw allow 5000 && sudo ufw allow 27017 && sudo ufw --force enable" \
-            --become
-
-          # Configure firewall for Java API server
-          ansible java_mysql -i ansible/inventory/hosts.yml \
-            --private-key "${HOME}/.ssh/vprofile-prod.pem" \
-            -m shell -a "sudo ufw allow 22 && sudo ufw allow 9000 && sudo ufw allow 3306 && sudo ufw --force enable" \
-            --become
-
-      - name: Create Application Directories
-        env:
-          ANSIBLE_HOST_KEY_CHECKING: "False"
-        run: |
-          echo "📁 Creating application directories..."
-          
-          # Create directories on all servers
-          ansible all -i ansible/inventory/hosts.yml \
-            --private-key "${HOME}/.ssh/vprofile-prod.pem" \
-            -m shell -a "sudo mkdir -p /opt/emart /var/log/emart && sudo chown ubuntu:ubuntu /opt/emart /var/log/emart" \
-            --become
-
-      - name: Verify Installation
-        run: |
-          echo "🔍 Verifying installations on all servers..."
-          
-          # Check Docker installation
-          echo "Checking Docker..."
-          ansible all -i ansible/inventory/hosts.yml \
-            --private-key "${HOME}/.ssh/vprofile-prod.pem" \
-            -m shell -a "docker --version && sudo systemctl status docker" --one-line
-
-          # Check Node.js on relevant servers
-          echo "Checking Node.js..."
-          ansible client_nginx,node_mongo -i ansible/inventory/hosts.yml \
-            --private-key "${HOME}/.ssh/vprofile-prod.pem" \
-            -m shell -a "node --version && npm --version" --one-line || echo "Node.js not installed on some servers"
-
-          # Check Java on Java server
-          echo "Checking Java..."
-          ansible java_mysql -i ansible/inventory/hosts.yml \
-            --private-key "${HOME}/.ssh/vprofile-prod.pem" \
-            -m shell -a "java -version && mvn --version" --one-line || echo "Java/Maven not installed"
-
-          # Check Nginx on client server
-          echo "Checking Nginx..."
-          ansible client_nginx -i ansible/inventory/hosts.yml \
-            --private-key "${HOME}/.ssh/vprofile-prod.pem" \
-            -m shell -a "sudo systemctl status nginx" --one-line || echo "Nginx not running"
-
-      - name: Setup Summary
-        run: |
-          echo "✅ Infrastructure setup completed!"
-          echo ""
-          echo "📊 Server Summary:"
-          echo "🖥️  Client + Nginx: 13.51.166.62 (Docker, Node.js, Nginx)"
-          echo "🔗 Node API + MongoDB: 13.62.76.96 (Docker, Node.js, MongoDB tools)" 
-          echo "☕ Java API + MySQL: 51.20.54.156 (Docker, Java 8, Maven, MySQL client)"
-          echo ""
-          echo "🚀 Ready for application deployment with Kamal!"
+      - name: Cleanup
+        if: always()
+        run: rm -rf ~/.ssh/

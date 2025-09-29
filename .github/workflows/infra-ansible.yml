@@ -7,7 +7,7 @@ on:
     branches: [main]
     paths:
       - 'ansible/**'
-      - '.github/workflows/setup-infrastructure.yml'
+      - '.github/workflows/infra-ansible.yml'
 
 jobs:
   setup-infrastructure:

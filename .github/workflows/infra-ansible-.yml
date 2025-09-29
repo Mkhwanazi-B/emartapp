@@ -31,12 +31,14 @@ jobs:
           set -euxo pipefail
           export SSH_DIR="${RUNNER_TEMP}/ssh"
           mkdir -p "$SSH_DIR"
-          # fail fast if secret missing
           [[ -n "${{ secrets.SSH_PRIVATE_KEY }}" ]]
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > "$SSH_DIR/vprofile-prod.pem"
           chmod 600 "$SSH_DIR/vprofile-prod.pem"
-          ssh-keyscan -H 13.51.166.62 13.62.76.96 51.20.54.156 >> "$SSH_DIR/known_hosts"
-          # export path for next step
+
+          # scan each host individually; ignore failures
+          for h in 13.51.166.62 13.62.76.96 51.20.54.156; do
+          ssh-keyscan -H "$h" >> "$SSH_DIR/known_hosts" 2>/dev/null || echo "⚠️  $h unreachable"
+          done
           echo "SSH_DIR=$SSH_DIR" >> "$GITHUB_ENV"
 
       - name: Run Ansible Playbook

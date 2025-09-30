@@ -1,19 +1,21 @@
+secrets:
+  - .kamal/secrets.age
 service: emartapp-dev
 image: blessing67/emartapp
 servers:
   web:
     hosts:
-      - 13.60.187.151:22  # Server 1: Nginx + Client
+      - 16.171.23.91:22  # Server 1: Nginx + Client
     labels:
       traefik.http.routers.emartapp-dev.rule: "Host(`dev.emartapp.yourdomain.com`)"  # Replace with dev domain
   nodeapi:
     hosts:
-      - 51.21.182.191:22  # Server 2: Node.js API + MongoDB
+      - 16.171.24.148:22  # Server 2: Node.js API + MongoDB
     labels:
       traefik.http.routers.emartapi-dev.rule: "Host(`api.dev.emartapp.yourdomain.com`)"  # Replace with dev domain
   javaapi:
     hosts:
-      - 13.61.34.198:22  # Server 3: Java API + MySQL
+      - 13.60.25.27:22  # Server 3: Java API + MySQL
     cmd: "--spring.profiles.active=dev"
     labels:
       traefik.http.routers.emartjava-dev.rule: "Host(`java.dev.emartapp.yourdomain.com`)"  # Replace with dev domain

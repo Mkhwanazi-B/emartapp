@@ -6,21 +6,21 @@ servers:
     hosts:
       - 16.171.23.91:22  # client_nginx
     labels:
-      traefik.http.routers.emartapp.rule: "Host(`16.171.23.91`)"  # Using IP instead of domain
-      traefik.http.services.emartapp.loadbalancer.server.port: 80  # Web/Nginx port
+      traefik.http.routers.emartapp.rule: "Host(`16.171.23.91`)"
+      traefik.http.services.emartapp.loadbalancer.server.port: 80
   nodeapi:
     hosts:
       - 16.171.24.148:22  # node_mongo
     labels:
-      traefik.http.routers.emartapi.rule: "Host(`16.171.24.148`)"  # Using IP instead of domain
-      traefik.http.services.emartapi.loadbalancer.server.port: 3000  # Node.js app port (confirm this)
+      traefik.http.routers.emartapi.rule: "Host(`16.171.24.148`)"
+      traefik.http.services.emartapi.loadbalancer.server.port: 3000
   javaapi:
     hosts:
       - 13.60.25.27:22  # java_mysql
     cmd: "--spring.profiles.active=dev"
     labels:
-      traefik.http.routers.emartjava.rule: "Host(`13.60.25.27`)"  # Using IP instead of domain
-      traefik.http.services.emartjava.loadbalancer.server.port: 8080  # Java app port (confirm this)
+      traefik.http.routers.emartjava.rule: "Host(`13.60.25.27`)"
+      traefik.http.services.emartjava.loadbalancer.server.port: 8080
 registry:
   username: blessing67
   password:
@@ -34,6 +34,7 @@ env:
     - MYSQL_DATABASE
     - MONGO_INITDB_DATABASE
 builder:
+  arch: amd64        # <-- added (or 'arm64' / 'native')
   args:
     client:
       context: ./client
@@ -49,7 +50,7 @@ accessories:
   emongo:
     image: mongo:4
     host: 16.171.24.148:22
-    port: "27017:27017"  # MongoDB port
+    port: "27017:27017"
     env:
       MONGO_INITDB_DATABASE: epoc
     directories:
@@ -57,10 +58,9 @@ accessories:
   emartdb:
     image: mysql:8.0.33
     host: 13.60.25.27:22
-    port: "3306:3306"  # MySQL port
+    port: "3306:3306"
     env:
       MYSQL_ROOT_PASSWORD: emartdbpass
       MYSQL_DATABASE: books
     directories:
       - /home/ubuntu/mysql:/var/lib/mysql
-# Secrets are handled via env.secret and the Kamal secrets file mechanism

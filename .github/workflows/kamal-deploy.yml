@@ -41,73 +41,80 @@ jobs:
     needs: pre-checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.4'
-      - run: gem install kamal
-      
-      - name: Setup SSH
-        run: |
-          install -m 600 -D /dev/null ~/.ssh/id_rsa
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          ssh-keyscan 16.171.24.148 >> ~/.ssh/known_hosts
+    - uses: actions/checkout@v4
+    - uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.4'
+    - run: gem install kamal
+    
+    - name: Setup SSH
+      run: |
+        install -m 600 -D /dev/null ~/.ssh/id_rsa
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        ssh-keyscan 16.171.24.148 >> ~/.ssh/known_hosts
 
-      - name: Deploy Node API
-        run: |
-          curl -fsSL https://github.com/FiloSottile/age/releases/download/v1.1.1/age-v1.1.1-linux-amd64.tar.gz | sudo tar -xzf - -C /usr/local/bin --strip-components=1
-          age -d -i .kamal/secrets-age.txt -o .env.decrypted .kamal/secrets.age
-          set -a && source .env.decrypted && set +a
-          export KAMAL_REGISTRY_PASSWORD="${{ secrets.DOCKER_HUB_PASSWORD }}"
-          kamal deploy -c config/deploy-nodeapi.yml
-          rm .env.decrypted
+    - name: Deploy Node API
+      run: |
+        git pull origin main
+        curl -fsSL https://github.com/FiloSottile/age/releases/download/v1.1.1/age-v1.1.1-linux-amd64.tar.gz | sudo tar -xzf - -C /usr/local/bin --strip-components=1
+        age -d -i .kamal/secrets-age.txt -o .env.decrypted .kamal/secrets.age
+        echo "Checking secrets..."
+        grep MONGO_INITDB_DATABASE .env.decrypted || echo "MONGO missing!"
+        set -a && source .env.decrypted && set +a
+        export KAMAL_REGISTRY_PASSWORD="${{ secrets.DOCKER_HUB_PASSWORD }}"
+        kamal deploy -c config/deploy-nodeapi.yml
+        rm .env.decrypted
 
   deploy-javaapi:
     needs: deploy-nodeapi
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.4'
-      - run: gem install kamal
-      
-      - name: Setup SSH
-        run: |
-          install -m 600 -D /dev/null ~/.ssh/id_rsa
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          ssh-keyscan 13.60.25.27 >> ~/.ssh/known_hosts
+    - uses: actions/checkout@v4
+    - uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.4'
+    - run: gem install kamal
+    
+    - name: Setup SSH
+      run: |
+        install -m 600 -D /dev/null ~/.ssh/id_rsa
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        ssh-keyscan 13.60.25.27 >> ~/.ssh/known_hosts
 
-      - name: Deploy Java API
-        run: |
-          curl -fsSL https://github.com/FiloSottile/age/releases/download/v1.1.1/age-v1.1.1-linux-amd64.tar.gz | sudo tar -xzf - -C /usr/local/bin --strip-components=1
-          age -d -i .kamal/secrets-age.txt -o .env.decrypted .kamal/secrets.age
-          set -a && source .env.decrypted && set +a
-          export KAMAL_REGISTRY_PASSWORD="${{ secrets.DOCKER_HUB_PASSWORD }}"
-          kamal deploy -c config/deploy-javaapi.yml
-          rm .env.decrypted
+    - name: Deploy Java API
+      run: |
+        git pull origin main
+        curl -fsSL https://github.com/FiloSottile/age/releases/download/v1.1.1/age-v1.1.1-linux-amd64.tar.gz | sudo tar -xzf - -C /usr/local/bin --strip-components=1
+        age -d -i .kamal/secrets-age.txt -o .env.decrypted .kamal/secrets.age
+        echo "Checking secrets..."
+        grep MYSQL_ROOT_PASSWORD .env.decrypted || echo "MYSQL secrets missing!"
+        set -a && source .env.decrypted && set +a
+        export KAMAL_REGISTRY_PASSWORD="${{ secrets.DOCKER_HUB_PASSWORD }}"
+        kamal deploy -c config/deploy-javaapi.yml
+        rm .env.decrypted
 
   deploy-client:
     needs: [deploy-nodeapi, deploy-javaapi]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.4'
-      - run: gem install kamal
-      
-      - name: Setup SSH
-        run: |
-          install -m 600 -D /dev/null ~/.ssh/id_rsa
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          ssh-keyscan 16.171.23.91 >> ~/.ssh/known_hosts
+    - uses: actions/checkout@v4
+    - uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.4'
+    - run: gem install kamal
+    
+    - name: Setup SSH
+      run: |
+        install -m 600 -D /dev/null ~/.ssh/id_rsa
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        ssh-keyscan 16.171.23.91 >> ~/.ssh/known_hosts
 
-      - name: Deploy Client
-        run: |
-          curl -fsSL https://github.com/FiloSottile/age/releases/download/v1.1.1/age-v1.1.1-linux-amd64.tar.gz | sudo tar -xzf - -C /usr/local/bin --strip-components=1
-          age -d -i .kamal/secrets-age.txt -o .env.decrypted .kamal/secrets.age
-          set -a && source .env.decrypted && set +a
-          export KAMAL_REGISTRY_PASSWORD="${{ secrets.DOCKER_HUB_PASSWORD }}"
-          kamal deploy -c config/deploy-client.yml
-          rm .env.decrypted
+    - name: Deploy Client
+      run: |
+        git pull origin main
+        curl -fsSL https://github.com/FiloSottile/age/releases/download/v1.1.1/age-v1.1.1-linux-amd64.tar.gz | sudo tar -xzf - -C /usr/local/bin --strip-components=1
+        age -d -i .kamal/secrets-age.txt -o .env.decrypted .kamal/secrets.age
+        set -a && source .env.decrypted && set +a
+        export KAMAL_REGISTRY_PASSWORD="${{ secrets.DOCKER_HUB_PASSWORD }}"
+        kamal deploy -c config/deploy-client.yml
+        rm .env.decrypted

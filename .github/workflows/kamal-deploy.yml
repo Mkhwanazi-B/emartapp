@@ -72,6 +72,10 @@ jobs:
           sudo tar -xzf age.tar.gz -C /usr/local/bin --strip-components=1
           rm age.tar.gz
 
+          echo "AGE_SECRET_KEY length: ${#AGE_SECRET_KEY}"
+          echo "First line:"
+          echo "$AGE_SECRET_KEY" | head -n 1
+
           # 2. decrypt secrets
           export AGE_SECRET_KEY=$(echo "${{ secrets.KAMAL_AGE_KEY }}")
           age -d -o .env.decrypted .kamal/secrets.age

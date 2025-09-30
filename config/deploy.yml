@@ -7,17 +7,20 @@ servers:
       - 16.171.23.91:22  # client_nginx
     labels:
       traefik.http.routers.emartapp.rule: "Host(`16.171.23.91`)"  # Using IP instead of domain
+      traefik.http.services.emartapp.loadbalancer.server.port: 80  # Web/Nginx port
   nodeapi:
     hosts:
       - 16.171.24.148:22  # node_mongo
     labels:
       traefik.http.routers.emartapi.rule: "Host(`16.171.24.148`)"  # Using IP instead of domain
+      traefik.http.services.emartapi.loadbalancer.server.port: 3000  # Node.js app port (confirm this)
   javaapi:
     hosts:
       - 13.60.25.27:22  # java_mysql
     cmd: "--spring.profiles.active=dev"
     labels:
       traefik.http.routers.emartjava.rule: "Host(`13.60.25.27`)"  # Using IP instead of domain
+      traefik.http.services.emartjava.loadbalancer.server.port: 8080  # Java app port (confirm this)
 registry:
   username: blessing67
   password:
@@ -41,16 +44,13 @@ builder:
       context: ./javaapi
     nginx:
       context: ./nginx
-traefik:
-  args:
-    - "--entrypoints.web.address=:80"
 volumes:
   - "/var/run/docker.sock:/var/run/docker.sock:ro"
 accessories:
   emongo:
     image: mongo:4
     host: 16.171.24.148:22
-    port: "27017:27017"
+    port: "27017:27017"  # MongoDB port
     env:
       MONGO_INITDB_DATABASE: epoc
     directories:
@@ -58,11 +58,10 @@ accessories:
   emartdb:
     image: mysql:8.0.33
     host: 13.60.25.27:22
-    port: "3306:3306"
+    port: "3306:3306"  # MySQL port
     env:
       MYSQL_ROOT_PASSWORD: emartdbpass
       MYSQL_DATABASE: books
     directories:
       - /home/ubuntu/mysql:/var/lib/mysql
-secrets:
-  - .kamal/secrets.age
+# Secrets are handled via env.secret and the Kamal secrets file mechanism

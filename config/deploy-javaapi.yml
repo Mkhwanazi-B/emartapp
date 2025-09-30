@@ -29,9 +29,6 @@ builder:
   dockerfile: javaapi/Dockerfile
   context: .
 
-proxy:
-  host: false
-
 accessories:
   emartdb:
     image: mysql:8.0.33

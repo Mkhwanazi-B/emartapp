@@ -27,9 +27,6 @@ builder:
   dockerfile: nodeapi/Dockerfile
   context: .
 
-proxy:
-  host: false
-
 accessories:
   emongo:
     image: mongo:4

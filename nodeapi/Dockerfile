@@ -1,6 +1,6 @@
 FROM node:14 AS nodeapi-build
 WORKDIR /usr/src/app
-COPY ./ ./nodeapi/
+COPY ./nodeapi ./  
 RUN cd nodeapi && npm install
 
 FROM node:14

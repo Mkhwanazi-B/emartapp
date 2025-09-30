@@ -6,6 +6,7 @@ on:
       - 'config/deploy.yml'
       - '.kamal/secrets*'
       - '.github/workflows/kamal-deploy.yml'
+      - '.gitignore'
 
 concurrency:
   group: kamal-deploy
@@ -65,12 +66,11 @@ jobs:
 
       - name: Deploy with Kamal
         run: |
+          export AGE_SECRET_KEY=$(echo "${{ secrets.KAMAL_AGE_KEY }}")
           kamal deploy --config-file config/deploy.yml
         env:
-          KAMAL_REGISTRY_PASSWORD: ${{ secrets.KAMAL_REGISTRY_PASSWORD }}
-          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
-          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-          MONGO_INITDB_DATABASE: ${{ secrets.MONGO_INITDB_DATABASE }}
+          # remove the old plain-text exports; Kamal reads them from .kamal/secrets.age
+          AGE_SECRET_KEY: ${{ secrets.KAMAL_AGE_KEY }}
 
       - name: Clean up SSH Key
         if: always()

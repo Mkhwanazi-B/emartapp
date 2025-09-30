@@ -64,13 +64,19 @@ jobs:
           ssh -i ~/.ssh/id_rsa ubuntu@13.60.25.27 "mkdir -p /home/ubuntu/mysql && touch /home/ubuntu/mysql/test && rm /home/ubuntu/mysql/test" ||
             { echo "Volume permission failed on 13.60.25.27"; exit 1; }
 
+      - name: Decrypt Kamal secrets
+        run: |
+          # install age binary (Ubuntu runner)
+          curl -sSL https://github.com/FiloSottile/age/releases/latest/download/age-v1.1.1-linux-amd64.tar.gz | tar xz -C /tmp && sudo mv /tmp/age/age* /usr/local/bin/
+          # export the key so Kamal can read it
+          export AGE_SECRET_KEY=$(echo "${{ secrets.KAMAL_AGE_KEY }}")
+          # verify secrets are readable
+          kamal config
+
       - name: Deploy with Kamal
         run: |
           export AGE_SECRET_KEY=$(echo "${{ secrets.KAMAL_AGE_KEY }}")
           kamal deploy --config-file config/deploy.yml
-        env:
-          # remove the old plain-text exports; Kamal reads them from .kamal/secrets.age
-          AGE_SECRET_KEY: ${{ secrets.KAMAL_AGE_KEY }}
 
       - name: Clean up SSH Key
         if: always()

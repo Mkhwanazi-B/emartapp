@@ -4,6 +4,9 @@ image: blessing67/emart-javaapi
 ssh:
   user: ubuntu
 
+proxy:
+  host: false
+
 servers:
   web:
     hosts:

@@ -81,7 +81,7 @@ jobs:
           echo "$AGE_SECRET_KEY" | head -n 1
     
            # 4. decrypt secrets
-           age -d -o .env.decrypted .kamal/secrets.age
+           age -d -i .kamal/secrets-age.txt -o .env.decrypted .kamal/secrets.age
     
            # 5. source & deploy
            set -a && source .env.decrypted && set +a

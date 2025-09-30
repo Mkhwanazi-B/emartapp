@@ -8,6 +8,7 @@ servers:
   web:
     hosts:
       - 16.171.24.148
+    port: 5000
 
 proxy:
   healthcheck:

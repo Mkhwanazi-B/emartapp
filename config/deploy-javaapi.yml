@@ -8,11 +8,12 @@ servers:
   web:
     hosts:
       - 13.60.25.27
+    port: 9000
 
 proxy:
   healthcheck:
     interval: 0
-    
+
 registry:
   username: blessing67
   password:

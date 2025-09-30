@@ -1,0 +1,22 @@
+service: emart-client
+image: blessing67/emart-client
+
+ssh:
+  user: ubuntu
+
+servers:
+  web:
+    hosts:
+      - 16.171.23.91
+
+registry:
+  username: blessing67
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+builder:
+  dockerfile: client/Dockerfile
+  context: .
+
+proxy:
+  host: 16.171.23.91

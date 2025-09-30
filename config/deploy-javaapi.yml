@@ -1,0 +1,37 @@
+service: emart-javaapi
+image: blessing67/emart-javaapi
+
+ssh:
+  user: ubuntu
+
+servers:
+  web:
+    hosts:
+      - 13.60.25.27
+
+registry:
+  username: blessing67
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+env:
+  clear:
+    SPRING_PROFILES_ACTIVE: production
+  secret:
+    - MYSQL_ROOT_PASSWORD
+    - MYSQL_DATABASE
+
+builder:
+  dockerfile: javaapi/Dockerfile
+  context: .
+
+accessories:
+  emartdb:
+    image: mysql:8.0.33
+    host: 13.60.25.27
+    port: "3306:3306"
+    env:
+      MYSQL_ROOT_PASSWORD: emartdbpass
+      MYSQL_DATABASE: books
+    directories:
+      - /home/ubuntu/mysql:/var/lib/mysql

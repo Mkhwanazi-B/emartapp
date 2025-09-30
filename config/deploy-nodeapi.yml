@@ -1,0 +1,35 @@
+service: emart-nodeapi
+image: blessing67/emart-nodeapi
+
+ssh:
+  user: ubuntu
+
+servers:
+  web:
+    hosts:
+      - 16.171.24.148
+
+registry:
+  username: blessing67
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+env:
+  clear:
+    NODE_ENV: production
+  secret:
+    - MONGO_INITDB_DATABASE
+
+builder:
+  dockerfile: nodeapi/Dockerfile
+  context: .
+
+accessories:
+  emongo:
+    image: mongo:4
+    host: 16.171.24.148
+    port: "27017:27017"
+    env:
+      MONGO_INITDB_DATABASE: epoc
+    directories:
+      - /home/ubuntu/data:/data/db

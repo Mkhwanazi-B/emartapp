@@ -21,6 +21,7 @@ env:
     - MONGO_INITDB_DATABASE
 
 builder:
+  arch: amd64
   dockerfile: nodeapi/Dockerfile
   context: .
 

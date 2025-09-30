@@ -42,7 +42,7 @@ mongoose
   })
   .catch(err => console.log("Error connecting to database".cyan, err));
 
-  // Add this route somewhere in your server.js file
+// Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
-});
+})

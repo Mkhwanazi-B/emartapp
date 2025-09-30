@@ -8,6 +8,13 @@ servers:
   web:
     hosts:
       - 16.171.24.148
+    healthcheck:
+      path: /health
+      port: 5000
+      interval: 10s
+      timeout: 5s
+      max_attempts: 3
+      
 registry:
   username: blessing67
   password:
@@ -22,14 +29,6 @@ builder:
   arch: amd64
   dockerfile: nodeapi/Dockerfile
   context: .
-
-healthcheck:
-  path: /health
-  port: 5000
-  interval: 10s
-  timeout: 5s
-  max_attempts: 3
-
 accessories:
   emongo:
     image: mongo:4

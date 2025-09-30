@@ -8,13 +8,6 @@ servers:
   web:
     hosts:
       - 16.171.24.148
-    healthcheck:
-      path: /health
-      port: 5000
-      interval: 10s
-      timeout: 5s
-      max_attempts: 3
-      
 registry:
   username: blessing67
   password:
@@ -24,6 +17,11 @@ env:
   clear:
     NODE_ENV: production
     MONGODB_URI: mongodb://emart-nodeapi-emongo:27017/epoc
+
+healthcheck:
+  path: /health
+  port: 5000
+  interval: 10s
 
 builder:
   arch: amd64

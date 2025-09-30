@@ -18,18 +18,17 @@ env:
     SPRING_PROFILES_ACTIVE: production
     MYSQL_HOST: emart-javaapi-emartdb
     MYSQL_PORT: 3306
-
-builder:
-  arch: amd64
-  dockerfile: javaapi/Dockerfile
-  context: .
+    MYSQL_ROOT_PASSWORD: emartdbpass
 
 healthcheck:
   path: /health
   port: 9000
   interval: 10s
-  timeout: 5s
-  max_attempts: 3
+
+builder:
+  arch: amd64
+  dockerfile: javaapi/Dockerfile
+  context: .
 
 accessories:
   emartdb:

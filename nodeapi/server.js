@@ -41,3 +41,8 @@ mongoose
     console.log("\nConnected to".magenta, "E-MART".cyan, "database".magenta);
   })
   .catch(err => console.log("Error connecting to database".cyan, err));
+
+  // Add this route somewhere in your server.js file
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});

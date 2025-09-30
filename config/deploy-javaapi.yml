@@ -8,10 +8,6 @@ servers:
   web:
     hosts:
       - 13.60.25.27
-    options:
-        healthcheck:
-           interval: 0  # Disables health check 
-
 registry:
   username: blessing67
   password:
@@ -27,6 +23,13 @@ builder:
   arch: amd64
   dockerfile: javaapi/Dockerfile
   context: .
+
+healthcheck:
+  path: /health
+  port: 9000
+  interval: 10s
+  timeout: 5s
+  max_attempts: 3
 
 accessories:
   emartdb:

@@ -34,7 +34,6 @@ env:
     - MYSQL_DATABASE
     - MONGO_INITDB_DATABASE
 builder:
-  multi: true
   args:
     client:
       context: ./client

@@ -8,6 +8,9 @@ servers:
   web:
     hosts:
       - 13.60.25.27
+
+    options:
+      "readiness-delay": 30
 registry:
   username: blessing67
   password:
@@ -19,11 +22,6 @@ env:
     MYSQL_HOST: emart-javaapi-emartdb
     MYSQL_PORT: 3306
     MYSQL_ROOT_PASSWORD: emartdbpass
-
-healthcheck:
-  path: /health
-  port: 9000
-  interval: 10s
 
 builder:
   arch: amd64

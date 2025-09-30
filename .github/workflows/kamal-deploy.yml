@@ -58,7 +58,13 @@ jobs:
         curl -fsSL https://github.com/FiloSottile/age/releases/download/v1.1.1/age-v1.1.1-linux-amd64.tar.gz | sudo tar -xzf - -C /usr/local/bin --strip-components=1
         age -d -i .kamal/secrets-age.txt -o .kamal/secrets .kamal/secrets.age
         export KAMAL_REGISTRY_PASSWORD="${{ secrets.DOCKER_HUB_PASSWORD }}"
+         # Deploy MongoDB first
+        kamal accessory boot emongo -c config/deploy-nodeapi.yml
+        sleep 10
+    
+        # Then deploy the app
         kamal deploy -c config/deploy-nodeapi.yml
+
 
   deploy-javaapi:
     needs: deploy-nodeapi
@@ -81,7 +87,12 @@ jobs:
         curl -fsSL https://github.com/FiloSottile/age/releases/download/v1.1.1/age-v1.1.1-linux-amd64.tar.gz | sudo tar -xzf - -C /usr/local/bin --strip-components=1
         age -d -i .kamal/secrets-age.txt -o .kamal/secrets .kamal/secrets.age
         export KAMAL_REGISTRY_PASSWORD="${{ secrets.DOCKER_HUB_PASSWORD }}"
-        kamal deploy -c config/deploy-javaapi.yml
+         Deploy MySQL first
+         kamal accessory boot emartdb -c config/deploy-javaapi.yml
+         sleep 10
+
+         # Then deploy the app
+         kamal deploy -c config/deploy-javaapi.yml
 
   deploy-client:
     needs: [deploy-nodeapi, deploy-javaapi]

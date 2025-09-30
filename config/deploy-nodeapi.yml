@@ -9,6 +9,10 @@ servers:
     hosts:
       - 16.171.24.148
 
+proxy:
+  healthcheck:
+    interval: 0
+
 registry:
   username: blessing67
   password:

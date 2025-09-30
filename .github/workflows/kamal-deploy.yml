@@ -3,6 +3,8 @@ name: Deploy with Kamal
 on:
   push:
     paths:
+      - 'config/deploy.yml'
+      - '.kamal/secrets*'
       - '.github/workflows/kamal-deploy.yml'
 
 concurrency:

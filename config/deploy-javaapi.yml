@@ -17,7 +17,7 @@ registry:
 env:
   clear:
     SPRING_PROFILES_ACTIVE: production
-    MYSQL_HOST: localhost
+    MYSQL_HOST: emart-javaapi-emartdb
     MYSQL_PORT: 3306
 
 builder:

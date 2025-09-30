@@ -27,6 +27,11 @@ app.get('/', (req,res) => {
   res.sendFile(process.cwd()+"/client/dist/client/index.html")
 })
 
+// Health check endpoint - MOVED HERE BEFORE ROUTES
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+})
+
 app.use("/api/user", userRoutes);
 app.use("/api/shop", shopRoutes);
 
@@ -41,8 +46,3 @@ mongoose
     console.log("\nConnected to".magenta, "E-MART".cyan, "database".magenta);
   })
   .catch(err => console.log("Error connecting to database".cyan, err));
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).send('OK');
-})

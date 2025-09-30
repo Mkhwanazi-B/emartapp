@@ -68,24 +68,27 @@ jobs:
         run: |
           # 1. download & install age (fixed URL)
           curl -fsSL -o age.tar.gz \
-            https://github.com/FiloSottile/age/releases/download/v1.1.1/age-v1.1.1-linux-amd64.tar.gz
+          https://github.com/FiloSottile/age/releases/download/v1.1.1/age-v1.1.1-linux-amd64.tar.gz
           sudo tar -xzf age.tar.gz -C /usr/local/bin --strip-components=1
           rm age.tar.gz
-
+    
+          # 2. export secret FIRST
+          export AGE_SECRET_KEY="${{ secrets.KAMAL_AGE_KEY }}"
+    
+          # 3. debug check
           echo "AGE_SECRET_KEY length: ${#AGE_SECRET_KEY}"
           echo "First line:"
           echo "$AGE_SECRET_KEY" | head -n 1
-
-          # 2. decrypt secrets
-          export AGE_SECRET_KEY=$(echo "${{ secrets.KAMAL_AGE_KEY }}")
-          age -d -o .env.decrypted .kamal/secrets.age
-
-          # 3. source & deploy
-          set -a && source .env.decrypted && set +a
-          kamal deploy --config-file config/deploy.yml
-
-          # 4. clean up
-          rm -f .env.decrypted
+    
+           # 4. decrypt secrets
+           age -d -o .env.decrypted .kamal/secrets.age
+    
+           # 5. source & deploy
+           set -a && source .env.decrypted && set +a
+           kamal deploy --config-file config/deploy.yml
+    
+           # 6. clean up
+           rm -f .env.decrypted
 
       - name: Clean up SSH Key
         if: always()

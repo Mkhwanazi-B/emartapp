@@ -1,0 +1,75 @@
+name: Deploy with Kamal
+
+on:
+  push:
+    paths:
+      - '.github/workflows/kamal-deploy.yml'
+
+concurrency:
+  group: kamal-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4' # Match your local Ruby version
+          bundler-cache: true
+
+      - name: Install Kamal
+        run: gem install kamal
+
+      - name: Install SSH Key
+        run: |
+          install -m 600 -D /dev/null ~/.ssh/id_rsa
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          echo "Host 16.171.23.91 16.171.24.148 13.60.25.27" >> ~/.ssh/config
+          echo "  User ubuntu" >> ~/.ssh/config
+          echo "  IdentityFile ~/.ssh/id_rsa" >> ~/.ssh/config
+          echo "  StrictHostKeyChecking no" >> ~/.ssh/config
+
+      - name: Add GitHub to known hosts
+        run: ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+
+      - name: Pre-Deployment Checks
+        run: |
+          # Test SSH connectivity
+          ssh -i ~/.ssh/id_rsa ubuntu@16.171.23.91 "echo 'SSH OK'" ||
+            { echo "SSH to 16.171.23.91 failed"; exit 1; }
+          ssh -i ~/.ssh/id_rsa ubuntu@16.171.24.148 "echo 'SSH OK'" ||
+            { echo "SSH to 16.171.24.148 failed"; exit 1; }
+          ssh -i ~/.ssh/id_rsa ubuntu@13.60.25.27 "echo 'SSH OK'" ||
+            { echo "SSH to 13.60.25.27 failed"; exit 1; }
+
+          # Check Docker version
+          ssh -i ~/.ssh/id_rsa ubuntu@16.171.23.91 "docker --version" ||
+            { echo "Docker not found on 16.171.23.91"; exit 1; }
+          ssh -i ~/.ssh/id_rsa ubuntu@16.171.24.148 "docker --version" ||
+            { echo "Docker not found on 16.171.24.148"; exit 1; }
+          ssh -i ~/.ssh/id_rsa ubuntu@13.60.25.27 "docker --version" ||
+            { echo "Docker not found on 13.60.25.27"; exit 1; }
+
+          # Check volume permissions
+          ssh -i ~/.ssh/id_rsa ubuntu@16.171.24.148 "mkdir -p /home/ubuntu/data && touch /home/ubuntu/data/test && rm /home/ubuntu/data/test" ||
+            { echo "Volume permission failed on 16.171.24.148"; exit 1; }
+          ssh -i ~/.ssh/id_rsa ubuntu@13.60.25.27 "mkdir -p /home/ubuntu/mysql && touch /home/ubuntu/mysql/test && rm /home/ubuntu/mysql/test" ||
+            { echo "Volume permission failed on 13.60.25.27"; exit 1; }
+
+      - name: Deploy with Kamal
+        run: |
+          kamal deploy --config-file config/deploy.yml
+        env:
+          KAMAL_REGISTRY_PASSWORD: ${{ secrets.KAMAL_REGISTRY_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          MONGO_INITDB_DATABASE: ${{ secrets.MONGO_INITDB_DATABASE }}
+
+      - name: Clean up SSH Key
+        if: always()
+        run: rm -f ~/.ssh/id_rsa ~/.ssh/config ~/.ssh/known_hosts

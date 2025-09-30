@@ -1,6 +1,10 @@
 
 service: emartapp
 image: blessing67/emartapp
+
+ssh:
+  user: ubuntu
+  
 servers:
   web:
     hosts:

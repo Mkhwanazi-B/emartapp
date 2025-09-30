@@ -55,15 +55,10 @@ jobs:
 
     - name: Deploy Node API
       run: |
-        git pull origin main
         curl -fsSL https://github.com/FiloSottile/age/releases/download/v1.1.1/age-v1.1.1-linux-amd64.tar.gz | sudo tar -xzf - -C /usr/local/bin --strip-components=1
-        age -d -i .kamal/secrets-age.txt -o .env.decrypted .kamal/secrets.age
-        echo "Checking secrets..."
-        grep MONGO_INITDB_DATABASE .env.decrypted || echo "MONGO missing!"
-        set -a && source .env.decrypted && set +a
+        age -d -i .kamal/secrets-age.txt -o .kamal/secrets .kamal/secrets.age
         export KAMAL_REGISTRY_PASSWORD="${{ secrets.DOCKER_HUB_PASSWORD }}"
         kamal deploy -c config/deploy-nodeapi.yml
-        rm .env.decrypted
 
   deploy-javaapi:
     needs: deploy-nodeapi
@@ -83,15 +78,10 @@ jobs:
 
     - name: Deploy Java API
       run: |
-        git pull origin main
         curl -fsSL https://github.com/FiloSottile/age/releases/download/v1.1.1/age-v1.1.1-linux-amd64.tar.gz | sudo tar -xzf - -C /usr/local/bin --strip-components=1
-        age -d -i .kamal/secrets-age.txt -o .env.decrypted .kamal/secrets.age
-        echo "Checking secrets..."
-        grep MYSQL_ROOT_PASSWORD .env.decrypted || echo "MYSQL secrets missing!"
-        set -a && source .env.decrypted && set +a
+        age -d -i .kamal/secrets-age.txt -o .kamal/secrets .kamal/secrets.age
         export KAMAL_REGISTRY_PASSWORD="${{ secrets.DOCKER_HUB_PASSWORD }}"
         kamal deploy -c config/deploy-javaapi.yml
-        rm .env.decrypted
 
   deploy-client:
     needs: [deploy-nodeapi, deploy-javaapi]
@@ -111,10 +101,7 @@ jobs:
 
     - name: Deploy Client
       run: |
-        git pull origin main
         curl -fsSL https://github.com/FiloSottile/age/releases/download/v1.1.1/age-v1.1.1-linux-amd64.tar.gz | sudo tar -xzf - -C /usr/local/bin --strip-components=1
-        age -d -i .kamal/secrets-age.txt -o .env.decrypted .kamal/secrets.age
-        set -a && source .env.decrypted && set +a
+        age -d -i .kamal/secrets-age.txt -o .kamal/secrets .kamal/secrets.age
         export KAMAL_REGISTRY_PASSWORD="${{ secrets.DOCKER_HUB_PASSWORD }}"
         kamal deploy -c config/deploy-client.yml
-        rm .env.decrypted

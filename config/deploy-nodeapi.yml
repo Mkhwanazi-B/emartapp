@@ -8,11 +8,9 @@ servers:
   web:
     hosts:
       - 16.171.24.148
-
-proxy:
-  app_port: 5000
-  healthcheck:
-    interval: 0
+    options:
+      publish:
+        - "5000:5000"
 
 registry:
   username: blessing67
@@ -28,6 +26,10 @@ builder:
   arch: amd64
   dockerfile: nodeapi/Dockerfile
   context: .
+
+proxy:
+  host: false
+
 accessories:
   emongo:
     image: mongo:4

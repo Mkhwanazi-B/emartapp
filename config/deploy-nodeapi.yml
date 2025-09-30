@@ -8,9 +8,9 @@ servers:
   web:
     hosts:
       - 16.171.24.148
-    port: 5000
 
 proxy:
+  app_port: 5000
   healthcheck:
     interval: 0
 

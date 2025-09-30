@@ -17,9 +17,8 @@ registry:
 env:
   clear:
     SPRING_PROFILES_ACTIVE: production
-  secret:
-    - MYSQL_ROOT_PASSWORD
-    - MYSQL_DATABASE
+    MYSQL_HOST: localhost
+    MYSQL_PORT: 3306
 
 builder:
   arch: amd64

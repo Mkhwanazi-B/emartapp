@@ -17,8 +17,7 @@ registry:
 env:
   clear:
     NODE_ENV: production
-  secret:
-    - MONGO_INITDB_DATABASE
+    MONGODB_URI: mongodb://localhost:27017/epoc
 
 builder:
   arch: amd64

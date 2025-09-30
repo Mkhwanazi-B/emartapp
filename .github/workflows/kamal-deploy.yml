@@ -83,8 +83,8 @@ jobs:
            # 4. decrypt secrets
            age -d -i .kamal/secrets-age.txt -o .env.decrypted .kamal/secrets.age
     
-           # 5. source & deploy
            set -a && source .env.decrypted && set +a
+           export KAMAL_REGISTRY_PASSWORD="${{ secrets.DOCKER_HUB_PASSWORD }}"
            kamal deploy --config-file config/deploy.yml
     
            # 6. clean up

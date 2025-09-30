@@ -8,8 +8,6 @@ servers:
   web:
     hosts:
       - 16.171.24.148
-    options:
-      "readiness-delay": 30
 
 registry:
   username: blessing67

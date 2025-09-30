@@ -8,6 +8,9 @@ servers:
   web:
     hosts:
       - 16.171.23.91
+    options:
+        healthcheck:
+           interval: 0  # Disables health check 
 
 registry:
   username: blessing67

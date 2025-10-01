@@ -91,7 +91,7 @@ jobs:
             docker logs api --tail 30
             exit 1
             EOF
-            
+
   deploy-javaapi:
     needs: build-images
     runs-on: ubuntu-latest
@@ -108,11 +108,14 @@ jobs:
 
       - name: Clean existing containers
         run: |
-          ssh -i ~/.ssh/id_rsa ubuntu@51.21.200.51 << 'EOF'
-            docker stop $(docker ps -aq --filter "name=mysql") 2>/dev/null || true
-            docker rm $(docker ps -aq --filter "name=mysql") 2>/dev/null || true
-            docker stop $(docker ps -aq --filter "name=webapi") 2>/dev/null || true
-            docker rm $(docker ps -aq --filter "name=webapi") 2>/dev/null || true
+          ssh -i ~/.ssh/id_rsa ubuntu@13.60.196.137 << 'EOF'
+          # Stop all containers using port 80
+          docker ps -q --filter "publish=80" | xargs -r docker stop
+          docker ps -aq --filter "publish=80" | xargs -r docker rm
+      
+          # Also stop by name
+          docker stop nginx client 2>/dev/null || true
+          docker rm nginx client 2>/dev/null || true
           EOF
 
       - name: Deploy Java API

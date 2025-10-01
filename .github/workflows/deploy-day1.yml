@@ -52,12 +52,20 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan 51.21.180.27 >> ~/.ssh/known_hosts
 
+      - name: Clean existing containers
+        run: |
+          ssh -i ~/.ssh/id_rsa ubuntu@51.21.180.27 << 'EOF'
+            docker stop $(docker ps -aq --filter "name=mongo") 2>/dev/null || true
+            docker rm $(docker ps -aq --filter "name=mongo") 2>/dev/null || true
+            docker stop $(docker ps -aq --filter "name=api") 2>/dev/null || true
+            docker rm $(docker ps -aq --filter "name=api") 2>/dev/null || true
+          EOF
+
       - name: Deploy Node API
         run: |
           scp -i ~/.ssh/id_rsa infrastructure/docker-compose/docker-compose.nodeapi.yml ubuntu@51.21.180.27:~/
           ssh -i ~/.ssh/id_rsa ubuntu@51.21.180.27 << 'EOF'
             export VERSION=${{ env.VERSION }}
-            docker-compose -f docker-compose.nodeapi.yml down || true
             docker-compose -f docker-compose.nodeapi.yml pull
             docker-compose -f docker-compose.nodeapi.yml up -d
             sleep 15
@@ -65,13 +73,13 @@ jobs:
 
       - name: Health check
         run: |
-          for i in {1..20}; do
+          for i in {1..5}; do
             if curl -f http://51.21.180.27:5000/health 2>/dev/null; then
               echo "✓ Node API is healthy"
               exit 0
             fi
-            echo "Attempt $i/20..."
-            sleep 3
+            echo "Attempt $i/5..."
+            sleep 5
           done
           echo "✗ Health check failed"
           ssh -i ~/.ssh/id_rsa ubuntu@51.21.180.27 "docker logs api --tail 50"
@@ -91,12 +99,20 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan 51.21.200.51 >> ~/.ssh/known_hosts
 
+      - name: Clean existing containers
+        run: |
+          ssh -i ~/.ssh/id_rsa ubuntu@51.21.200.51 << 'EOF'
+            docker stop $(docker ps -aq --filter "name=mysql") 2>/dev/null || true
+            docker rm $(docker ps -aq --filter "name=mysql") 2>/dev/null || true
+            docker stop $(docker ps -aq --filter "name=webapi") 2>/dev/null || true
+            docker rm $(docker ps -aq --filter "name=webapi") 2>/dev/null || true
+          EOF
+
       - name: Deploy Java API
         run: |
           scp -i ~/.ssh/id_rsa infrastructure/docker-compose/docker-compose.javaapi.yml ubuntu@51.21.200.51:~/
           ssh -i ~/.ssh/id_rsa ubuntu@51.21.200.51 << 'EOF'
             export VERSION=${{ env.VERSION }}
-            docker-compose -f docker-compose.javaapi.yml down || true
             docker-compose -f docker-compose.javaapi.yml pull
             docker-compose -f docker-compose.javaapi.yml up -d
             sleep 20
@@ -116,6 +132,15 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan 13.60.196.137 >> ~/.ssh/known_hosts
 
+      - name: Clean existing containers
+        run: |
+          ssh -i ~/.ssh/id_rsa ubuntu@13.60.196.137 << 'EOF'
+            docker stop $(docker ps -aq --filter "name=nginx") 2>/dev/null || true
+            docker rm $(docker ps -aq --filter "name=nginx") 2>/dev/null || true
+            docker stop $(docker ps -aq --filter "name=client") 2>/dev/null || true
+            docker rm $(docker ps -aq --filter "name=client") 2>/dev/null || true
+          EOF
+
       - name: Deploy Client
         run: |
           ssh -i ~/.ssh/id_rsa ubuntu@13.60.196.137 'mkdir -p ~/nginx'
@@ -123,7 +148,6 @@ jobs:
           scp -i ~/.ssh/id_rsa infrastructure/nginx/default.conf ubuntu@13.60.196.137:~/nginx/
           ssh -i ~/.ssh/id_rsa ubuntu@13.60.196.137 << 'EOF'
             export VERSION=${{ env.VERSION }}
-            docker-compose -f docker-compose.client.yml down || true
             docker-compose -f docker-compose.client.yml pull
             docker-compose -f docker-compose.client.yml up -d
             sleep 10

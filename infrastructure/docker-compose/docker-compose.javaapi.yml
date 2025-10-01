@@ -12,6 +12,7 @@ services:
       - MYSQL_HOST=emartdb
       - MYSQL_PORT=3306
       - MYSQL_ROOT_PASSWORD=emartdbpass
+      - SPRING_DATASOURCE_USERNAME=root
     depends_on:
       - emartdb
     healthcheck:

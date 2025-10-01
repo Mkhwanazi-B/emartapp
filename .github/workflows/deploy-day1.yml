@@ -51,6 +51,7 @@ jobs:
 
       - name: Setup SSH
         run: |
+          mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan 51.21.180.27 >> ~/.ssh/known_hosts
@@ -140,11 +141,8 @@ jobs:
       - name: Clean existing containers
         run: |
           ssh -i ~/.ssh/id_rsa ubuntu@13.60.196.137 << 'EOF'
-            # Stop all containers using port 80
             docker ps -q --filter "publish=80" | xargs -r docker stop
             docker ps -aq --filter "publish=80" | xargs -r docker rm
-            
-            # Also stop by name
             docker stop nginx client 2>/dev/null || true
             docker rm nginx client 2>/dev/null || true
           EOF

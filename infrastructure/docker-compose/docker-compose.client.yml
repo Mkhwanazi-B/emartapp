@@ -2,17 +2,10 @@ version: "3.8"
 
 services:
   nginx:
-    image: nginx:latest
+    image: blessing67/emart-client:${VERSION:-latest}
     container_name: nginx
+    ports:
+      - "80:4200"
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
-    ports:
-      - "80:80"
-    restart: unless-stopped
-
-  client:
-    image: blessing67/emart-client:${VERSION:-latest}
-    ports:
-      - "4200:4200"
-    container_name: client
     restart: unless-stopped

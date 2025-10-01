@@ -1,6 +1,6 @@
 FROM node:14 AS nodeapi-build
 WORKDIR /usr/src/app
-COPY ./nodeapi ./  
+COPY . .
 RUN npm install
 
 FROM node:14
@@ -9,4 +9,3 @@ COPY --from=nodeapi-build /usr/src/app/ ./
 RUN ls
 EXPOSE 5000
 CMD ["/bin/sh", "-c", "cd /usr/src/app/ && npm start"]
-# Test3

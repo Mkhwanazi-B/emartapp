@@ -10,10 +10,6 @@ on:
       - '.github/workflows/deploy-day1.yml'
   workflow_dispatch:
 
-concurrency:
-  group: deploy-production
-  cancel-in-progress: true  # Auto-cancel redundant runs
-
 env:
   DOCKER_REGISTRY: blessing67
   VERSION: ${{ github.sha }}
@@ -37,21 +33,14 @@ jobs:
       - name: Build and push ${{ matrix.service }}
         run: |
           cd services/${{ matrix.service }}
-          docker build --pull -t ${{ env.DOCKER_REGISTRY }}/emart-${{ matrix.service }}:${{ env.VERSION }} . | tee ../../logs/${{ matrix.service }}-build.log
+          docker build -t ${{ env.DOCKER_REGISTRY }}/emart-${{ matrix.service }}:${{ env.VERSION }} .
           docker tag ${{ env.DOCKER_REGISTRY }}/emart-${{ matrix.service }}:${{ env.VERSION }} ${{ env.DOCKER_REGISTRY }}/emart-${{ matrix.service }}:latest
-          docker push ${{ env.DOCKER_REGISTRY }}/emart-${{ matrix.service }}:${{ env.VERSION }} | tee -a ../../logs/${{ matrix.service }}-build.log
-          docker push ${{ env.DOCKER_REGISTRY }}/emart-${{ matrix.service }}:latest | tee -a ../../logs/${{ matrix.service }}-build.log
-
-      - name: Upload build logs
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ matrix.service }}-build-log
-          path: logs/${{ matrix.service }}-build.log
+          docker push ${{ env.DOCKER_REGISTRY }}/emart-${{ matrix.service }}:${{ env.VERSION }}
+          docker push ${{ env.DOCKER_REGISTRY }}/emart-${{ matrix.service }}:latest
 
   deploy-nodeapi:
     needs: build-images
     runs-on: ubuntu-latest
-    continue-on-error: false
 
     steps:
       - uses: actions/checkout@v4
@@ -65,8 +54,6 @@ jobs:
 
       - name: Deploy Node API
         run: |
-          mkdir -p logs
-          {
           scp -i ~/.ssh/id_rsa infrastructure/docker-compose/docker-compose.nodeapi.yml ubuntu@51.21.180.27:~/
           ssh -i ~/.ssh/id_rsa ubuntu@51.21.180.27 << 'EOF'
             export VERSION=${{ env.VERSION }}
@@ -75,34 +62,24 @@ jobs:
             docker-compose -f docker-compose.nodeapi.yml up -d
             sleep 15
           EOF
-          } 2>&1 | tee logs/nodeapi-deploy.log
 
-      - name: Health check Node API
+      - name: Health check
         run: |
-          mkdir -p logs
-          {
-          for i in {1..2}; do
+          for i in {1..20}; do
             if curl -f http://51.21.180.27:5000/health 2>/dev/null; then
-              echo "Node API is healthy"
+              echo "✓ Node API is healthy"
               exit 0
             fi
-            echo "Attempt $i/2 failed, retrying..."
-            sleep 5
+            echo "Attempt $i/20..."
+            sleep 3
           done
-          echo "Node API health check failed"
+          echo "✗ Health check failed"
+          ssh -i ~/.ssh/id_rsa ubuntu@51.21.180.27 "docker logs api --tail 50"
           exit 1
-          } 2>&1 | tee logs/nodeapi-health.log
-
-      - name: Upload Node API logs
-        uses: actions/upload-artifact@v3
-        with:
-          name: nodeapi-logs
-          path: logs/
 
   deploy-javaapi:
     needs: build-images
     runs-on: ubuntu-latest
-    continue-on-error: false
 
     steps:
       - uses: actions/checkout@v4
@@ -116,8 +93,6 @@ jobs:
 
       - name: Deploy Java API
         run: |
-          mkdir -p logs
-          {
           scp -i ~/.ssh/id_rsa infrastructure/docker-compose/docker-compose.javaapi.yml ubuntu@51.21.200.51:~/
           ssh -i ~/.ssh/id_rsa ubuntu@51.21.200.51 << 'EOF'
             export VERSION=${{ env.VERSION }}
@@ -126,34 +101,10 @@ jobs:
             docker-compose -f docker-compose.javaapi.yml up -d
             sleep 20
           EOF
-          } 2>&1 | tee logs/javaapi-deploy.log
-
-      - name: Health check Java API
-        run: |
-          mkdir -p logs
-          {
-          for i in {1..2}; do
-            if curl -f http://51.21.200.51:9000/health 2>/dev/null; then
-              echo "Java API is healthy"
-              exit 0
-            fi
-            echo "Attempt $i/2 failed, retrying..."
-            sleep 5
-          done
-          echo "Java API health check failed"
-          exit 1
-          } 2>&1 | tee logs/javaapi-health.log
-
-      - name: Upload Java API logs
-        uses: actions/upload-artifact@v3
-        with:
-          name: javaapi-logs
-          path: logs/
 
   deploy-client:
     needs: [deploy-nodeapi, deploy-javaapi]
     runs-on: ubuntu-latest
-    continue-on-error: false
 
     steps:
       - uses: actions/checkout@v4
@@ -167,8 +118,6 @@ jobs:
 
       - name: Deploy Client
         run: |
-          mkdir -p logs
-          {
           ssh -i ~/.ssh/id_rsa ubuntu@13.60.196.137 'mkdir -p ~/nginx'
           scp -i ~/.ssh/id_rsa infrastructure/docker-compose/docker-compose.client.yml ubuntu@13.60.196.137:~/
           scp -i ~/.ssh/id_rsa infrastructure/nginx/default.conf ubuntu@13.60.196.137:~/nginx/
@@ -179,33 +128,13 @@ jobs:
             docker-compose -f docker-compose.client.yml up -d
             sleep 10
           EOF
-          } 2>&1 | tee logs/client-deploy.log
 
-      - name: Health check Client
+      - name: Deployment Summary
         run: |
-          mkdir -p logs
-          {
-          for i in {1..2}; do
-            if curl -f http://13.60.196.137 2>/dev/null; then
-              echo "Client is healthy"
-              exit 0
-            fi
-            echo "Attempt $i/2 failed, retrying..."
-            sleep 5
-          done
-          echo "Client health check failed"
-          exit 1
-          } 2>&1 | tee logs/client-health.log
-
-      - name: Upload Client logs
-        uses: actions/upload-artifact@v3
-        with:
-          name: client-logs
-          path: logs/
-
-      - name: Verify deployment
-        run: |
-          echo "Deployment complete!"
+          echo "=========================================="
+          echo "✓ Deployment Complete!"
+          echo "=========================================="
           echo "Node API: http://51.21.180.27:5000"
           echo "Java API: http://51.21.200.51:9000"
           echo "Client: http://13.60.196.137"
+          echo "=========================================="

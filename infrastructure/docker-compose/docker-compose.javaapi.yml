@@ -1,0 +1,37 @@
+version: "3.8"
+
+services:
+  webapi:
+    image: blessing67/emart-javaapi:${VERSION:-latest}
+    ports:
+      - "9000:9000"
+    restart: unless-stopped
+    container_name: webapi
+    environment:
+      - SPRING_PROFILES_ACTIVE=production
+      - MYSQL_HOST=emartdb
+      - MYSQL_PORT=3306
+      - MYSQL_ROOT_PASSWORD=emartdbpass
+    depends_on:
+      - emartdb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  emartdb:
+    image: mysql:8.0.33
+    container_name: emartdb
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=emartdbpass
+      - MYSQL_DATABASE=books
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: unless-stopped
+
+volumes:
+  mysql_data:

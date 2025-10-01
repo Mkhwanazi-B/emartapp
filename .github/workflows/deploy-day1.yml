@@ -93,7 +93,7 @@ jobs:
           EOF
 
   deploy-javaapi:
-    needs: build-images
+    needs: []
     runs-on: ubuntu-latest
 
     steps:

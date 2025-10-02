@@ -2,10 +2,23 @@
 - name: Install Docker and Docker Compose on Ubuntu servers
   hosts: all
   become: yes
-  gather_facts: yes
+  gather_facts: no  # Disable automatic fact gathering
   vars:
     ansible_ssh_timeout: 300
   tasks:
+    - name: Pause for java_mysql to avoid rate limiting
+      pause:
+        seconds: 30
+      when: inventory_hostname == 'java_mysql'
+      delegate_to: localhost
+
+    - name: Gather facts manually
+      setup:
+      retries: 5
+      delay: 10
+      register: setup_result
+      until: setup_result is success
+
     - name: Wait for system to be ready
       wait_for_connection:
         timeout: 300

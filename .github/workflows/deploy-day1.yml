@@ -111,11 +111,11 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan 13.48.203.229 >> ~/.ssh/known_hosts
+          ssh-keyscan 16.171.34.113 >> ~/.ssh/known_hosts
 
       - name: Clean existing containers
         run: |
-          ssh -i ~/.ssh/id_rsa ubuntu@13.48.203.229<< 'EOF'
+          ssh -i ~/.ssh/id_rsa ubuntu@16.171.34.113<< 'EOF'
             docker stop $(docker ps -aq --filter "name=mysql") 2>/dev/null || true
             docker rm $(docker ps -aq --filter "name=mysql") 2>/dev/null || true
             docker stop $(docker ps -aq --filter "name=webapi") 2>/dev/null || true
@@ -124,8 +124,8 @@ jobs:
 
       - name: Deploy Java API
         run: |
-          scp -i ~/.ssh/id_rsa infrastructure/docker-compose/docker-compose.javaapi.yml ubuntu@13.48.203.229:~/
-          ssh -i ~/.ssh/id_rsa ubuntu@13.48.203.229 << 'EOF'
+          scp -i ~/.ssh/id_rsa infrastructure/docker-compose/docker-compose.javaapi.yml ubuntu@16.171.34.113:~/
+          ssh -i ~/.ssh/id_rsa ubuntu@16.171.34.113 << 'EOF'
             export VERSION=${{ env.VERSION }}
             docker-compose -f docker-compose.javaapi.yml pull
             docker-compose -f docker-compose.javaapi.yml up -d
@@ -177,6 +177,6 @@ jobs:
           echo "✓ Deployment Complete!"
           echo "=========================================="
           echo "Node API: http://13.60.232.69:5000"
-          echo "Java API: http://13.48.203.229:9000"
+          echo "Java API: http://16.171.34.113:9000"
           echo "Client: http://13.53.212.154"
           echo "=========================================="

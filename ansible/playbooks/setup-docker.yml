@@ -1,6 +1,6 @@
 ---
 - name: Install Docker and Docker Compose on Ubuntu servers
-  hosts: all
+  hosts: all:!java_mysql
   become: yes
   gather_facts: no  # Disable automatic fact gathering
   vars:

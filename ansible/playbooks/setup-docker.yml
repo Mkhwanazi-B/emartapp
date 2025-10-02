@@ -70,9 +70,13 @@
 
     - name: Install Docker Compose
       get_url:
-        url: "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-{{ ansible_system }}-{{ ansible_machine }}"
-        dest: /usr/local/bin/docker-compose
-        mode: '0755'
+      url: "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-{{ ansible_system }}-{{ ansible_machine }}"
+      dest: /usr/local/bin/docker-compose
+      mode: '0755'
+      retries: 3
+      delay: 10
+      register: compose_result
+      until: compose_result is success
 
     - name: Add ubuntu user to docker group
       user:
